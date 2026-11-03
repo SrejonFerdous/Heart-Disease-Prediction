@@ -14,8 +14,12 @@
 </p>
 
 <p align="center">
-  <b>Live demo:</b> <a href="#">add Render URL here</a> &nbsp;|&nbsp;
-  <b>Swagger docs:</b> <code>/docs</code>
+  <b>Live demo:</b> <a href="https://heart-disease-prediction-ic6l.onrender.com">heart-disease-prediction-ic6l.onrender.com</a> &nbsp;|&nbsp;
+  <b>Swagger docs:</b> <a href="https://heart-disease-prediction-ic6l.onrender.com/docs">/docs</a>
+</p>
+
+<p align="center">
+  <sub>Hosted on Render's free tier, so the first request after a period of inactivity can take up to a minute while the service wakes up.</sub>
 </p>
 
 ---
@@ -124,6 +128,8 @@ python train.py
 ```
 
 ## API reference
+
+The examples below use `localhost:8000`. To try the live version, replace it with `https://heart-disease-prediction-ic6l.onrender.com`.
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
