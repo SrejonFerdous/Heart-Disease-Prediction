@@ -30,12 +30,14 @@ def root():
     return RedirectResponse(url="/docs")
 
 
-@app.get("/health")
+@app.get("/health", tags=["Status"], summary="Health check",
+         description="Returns `ok` when the API is up and running.")
 def health():
     return {"status": "ok"}
 
 
-@app.get("/info")
+@app.get("/info", tags=["Status"], summary="Model info",
+         description="Shows the model type and the list of input features it expects.")
 def info():
     return {
         "model_type": type(model.steps[-1][1]).__name__,
@@ -44,7 +46,9 @@ def info():
     }
 
 
-@app.post("/predict", response_model=PredictionResponse)
+@app.post("/predict", response_model=PredictionResponse, tags=["Prediction"],
+          summary="Predict heart disease",
+          description="Takes 13 clinical features of a patient and returns whether heart disease is predicted, along with the probability.")
 def predict(features: HeartFeatures):
     row = pd.DataFrame([features.model_dump()], columns=FEATURES)
     probability = float(model.predict_proba(row)[0][1])
