@@ -1,10 +1,65 @@
-# Heart Disease Prediction
+<h1 align="center">Heart Disease Prediction API</h1>
 
-A small REST API that predicts whether a patient has heart disease from 13 clinical measurements. The model is a scikit-learn logistic regression (with feature scaling) trained on the UCI heart disease data, and it is served with FastAPI and packaged with Docker so it can be deployed on Render.
+<p align="center">
+  A machine learning REST API that predicts the presence of heart disease from 13 clinical measurements,
+  built with FastAPI, containerized with Docker and deployed on Render.
+</p>
 
-Dataset: https://www.kaggle.com/datasets/johnsmith88/heart-disease-dataset (1025 rows, `target` = 1 means heart disease)
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/FastAPI-0.121-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/scikit--learn-1.7-F7931E?logo=scikitlearn&logoColor=white" alt="scikit-learn">
+  <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/Deployed%20on-Render-46E3B7?logo=render&logoColor=white" alt="Render">
+</p>
 
-Live URL: <add Render URL here>
+<p align="center">
+  <b>Live demo:</b> <a href="#">add Render URL here</a> &nbsp;|&nbsp;
+  <b>Swagger docs:</b> <code>/docs</code>
+</p>
+
+---
+
+## Overview
+
+Heart disease is one of the leading causes of death worldwide, and early screening can make a real difference. This project trains a classifier on the [Kaggle Heart Disease dataset](https://www.kaggle.com/datasets/johnsmith88/heart-disease-dataset) and serves it through a simple API. You send a patient's clinical values as JSON and get back a prediction and a probability.
+
+The main focus of the project is the deployment side: a clean API with input validation, a reproducible Docker image, and a one-click deploy on Render.
+
+**Highlights**
+
+- Logistic regression pipeline (feature scaling + classifier) with **~81% test accuracy**
+- Request validation with Pydantic, so out-of-range or missing values return a clear `422` error
+- Interactive Swagger UI generated automatically by FastAPI
+- Dockerized, so it can be started with a single `docker-compose up`
+- Deployed as a Docker web service on Render
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[heart.csv] --> B[train.py]
+    B --> C[(heart_model.joblib)]
+    C --> D[FastAPI app]
+    E[Client / curl / Postman] -- JSON --> D
+    D -- prediction --> E
+    D --> F[Docker image]
+    F --> G[Render]
+```
+
+1. `train.py` trains a `StandardScaler` + `LogisticRegression` pipeline and saves it with joblib.
+2. The FastAPI app loads the saved model once at startup.
+3. `/predict` validates the input, runs the model and returns the result.
+4. The Dockerfile packages the app and model, and Render builds and runs that image.
+
+## Tech stack
+
+| Layer | Tools |
+| --- | --- |
+| Model | scikit-learn, pandas, NumPy, joblib |
+| API | FastAPI, Pydantic, Uvicorn |
+| Packaging | Docker, Docker Compose |
+| Hosting | Render |
 
 ## Project structure
 
@@ -12,20 +67,113 @@ Live URL: <add Render URL here>
 .
 ├── app/
 │   ├── __init__.py
-│   ├── main.py            # FastAPI app and endpoints
-│   └── schemas.py         # request / response models
+│   ├── main.py             # FastAPI app and endpoints
+│   └── schemas.py          # request / response models
 ├── data/
-│   └── heart.csv          # dataset
+│   └── heart.csv           # dataset (1025 rows)
 ├── model/
-│   └── heart_model.joblib # trained pipeline (committed)
-├── train.py               # training script
+│   └── heart_model.joblib  # trained pipeline
+├── train.py                # training script
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
 └── README.md
 ```
 
-## Features
+## Model performance
+
+Trained on an 80/20 stratified split (`random_state=42`).
+
+| Metric | No disease (0) | Disease (1) |
+| --- | --- | --- |
+| Precision | 0.89 | 0.76 |
+| Recall | 0.70 | 0.91 |
+| F1-score | 0.78 | 0.83 |
+
+**Overall test accuracy: 0.81**
+
+The model leans towards high recall for the disease class, so it misses fewer actual cases. For a screening tool, that is the better trade-off.
+
+## Getting started
+
+### Run with Docker (recommended)
+
+```bash
+git clone https://github.com/SrejonFerdous/Heart-Disease-Prediction.git
+cd Heart-Disease-Prediction
+
+docker-compose build
+docker-compose up
+```
+
+Then open **http://localhost:8000/docs** to try the API in the browser.
+
+### Run without Docker
+
+```bash
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+### Retrain the model (optional)
+
+The trained model is already included, but you can retrain it with:
+
+```bash
+python train.py
+```
+
+## API reference
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| GET | `/health` | Health check |
+| GET | `/info` | Model type and feature list |
+| POST | `/predict` | Predict heart disease from patient data |
+| GET | `/docs` | Swagger UI |
+
+### `GET /health`
+
+```bash
+curl http://localhost:8000/health
+```
+
+```json
+{"status": "ok"}
+```
+
+### `GET /info`
+
+```bash
+curl http://localhost:8000/info
+```
+
+```json
+{
+  "model_type": "LogisticRegression",
+  "features": ["age", "sex", "cp", "trestbps", "chol", "fbs", "restecg", "thalach", "exang", "oldpeak", "slope", "ca", "thal"],
+  "target": "heart disease (1 = disease, 0 = no disease)"
+}
+```
+
+### `POST /predict`
+
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"age": 52, "sex": 1, "cp": 0, "trestbps": 125, "chol": 212, "fbs": 0, "restecg": 1, "thalach": 168, "exang": 0, "oldpeak": 1.0, "slope": 2, "ca": 2, "thal": 3}'
+```
+
+```json
+{"heart_disease": false, "probability": 0.2261}
+```
+
+`probability` is the model's estimated chance of heart disease (rounded to 4 decimals), and `heart_disease` is the predicted class.
+
+<details>
+<summary><b>Input features</b></summary>
+
+<br>
 
 | Feature | Description | Allowed values |
 | --- | --- | --- |
@@ -43,87 +191,30 @@ Live URL: <add Render URL here>
 | ca | Major vessels colored by fluoroscopy | 0 - 4 |
 | thal | Thalassemia type | 0 - 3 |
 
-Requests with a missing field or a value outside these ranges get a `422` response.
+A request with a missing field or a value outside these ranges returns `422 Unprocessable Entity`.
 
-## Training
+</details>
 
-```
-pip install -r requirements.txt
-python train.py
-```
+## Deployment on Render
 
-The script splits the data 80/20 (`random_state=42`, stratified), fits a `StandardScaler` + `LogisticRegression` pipeline, prints the test metrics and saves the pipeline to `model/heart_model.joblib`.
+1. Push the repository to GitHub.
+2. On Render, go to **New > Web Service** and connect the repo.
+3. Select **Docker** as the language. Leave the root directory empty, so the build context is the repo root.
+4. Click **Create Web Service** and wait for the build to finish.
 
-On my run the test accuracy was 0.8098 (about 81%), with recall of 0.91 for the "disease" class and 0.70 for the "no disease" class.
+Render provides a `PORT` environment variable, and the Dockerfile's start command picks it up automatically (it falls back to 8000 locally).
 
-The trained model file is committed, so you only need to run `train.py` again if you want to retrain.
+## Future improvements
 
-## Running locally (without Docker)
+- Compare other models (Random Forest, XGBoost) and add cross-validation
+- Add automated tests and a CI pipeline with GitHub Actions
+- Build a small frontend form for non-technical users
 
-```
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
+## Disclaimer
 
-The API is then available at http://localhost:8000. By default the model is loaded from `model/heart_model.joblib`; set the `MODEL_PATH` environment variable to load a different file.
+This project is for learning purposes only and is not a medical diagnostic tool.
 
-## Running with Docker
+## Author
 
-```
-docker-compose build
-docker-compose up
-```
-
-Swagger UI: http://localhost:8000/docs
-
-The image only contains `app/` and `model/` (the dataset is not copied in). The container listens on `$PORT` if it is set, otherwise on 8000.
-
-## Endpoints
-
-### GET /health
-
-```
-curl http://localhost:8000/health
-```
-
-```json
-{"status": "ok"}
-```
-
-### GET /info
-
-```
-curl http://localhost:8000/info
-```
-
-```json
-{
-  "model_type": "LogisticRegression",
-  "features": ["age", "sex", "cp", "trestbps", "chol", "fbs", "restecg", "thalach", "exang", "oldpeak", "slope", "ca", "thal"],
-  "target": "heart disease (1 = disease, 0 = no disease)"
-}
-```
-
-### POST /predict
-
-```
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{"age": 52, "sex": 1, "cp": 0, "trestbps": 125, "chol": 212, "fbs": 0, "restecg": 1, "thalach": 168, "exang": 0, "oldpeak": 1.0, "slope": 2, "ca": 2, "thal": 3}'
-```
-
-```json
-{"heart_disease": false, "probability": 0.2261}
-```
-
-`probability` is the model's probability of heart disease (rounded to 4 decimals) and `heart_disease` is the predicted class.
-
-`GET /` redirects to the Swagger docs at `/docs`.
-
-## Deploying on Render
-
-1. Push the repo to GitHub (make sure `model/heart_model.joblib` is included).
-2. On Render, click New > Web Service and connect the GitHub repo.
-3. Choose Docker as the environment/language. Leave the root directory empty so the build context is the repo root, and the Dockerfile path as `./Dockerfile`.
-4. Create the service. Render sets the `PORT` variable and the Dockerfile `CMD` uses it.
-5. Once it is live, open `<your-url>/docs` to try the API and paste the URL in the "Live URL" line at the top of this file.
+**Rayhan Ferdous Srejon**
+GitHub: [@SrejonFerdous](https://github.com/SrejonFerdous)
